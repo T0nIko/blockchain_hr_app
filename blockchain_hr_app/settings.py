@@ -33,8 +33,9 @@ ROOT_URLCONF = 'blockchain_hr_app.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'VotingApp/templates')]
-        ,
+        'DIRS': [
+            os.path.join(BASE_DIR, 'VotingApp/templates')
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

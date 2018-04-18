@@ -1,10 +1,32 @@
 from django.shortcuts import render, redirect
+from django.http import HttpResponse
 from django.views.generic import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import logout, login
 
 from .forms import RegistrationForm
-from .models import User
+from .models import User, EthAccount, ContractInstance
+from .utils import contract_instance_wrapper, post_review
+
+from eth_account import Account
+
+import json
+
+
+def assign_eth_account(user):
+    user_eth_account = Account.create()
+
+    eth_account = EthAccount(
+        user=user,
+        address=user_eth_account.address,
+        p_key=user_eth_account.privateKey
+    )
+
+    eth_account.save()
+
+
+def render_json(d, status=200):
+    return HttpResponse(json.dumps(d), content_type='application/json', status=status)
 
 
 class LoginMixin(LoginRequiredMixin):
@@ -26,6 +48,13 @@ class LogoutView(View):
         logout(request)
 
         return redirect('index')
+
+
+class LoginView(View):
+    template_name = 'login.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
 
 
 class RegistrationView(View):
@@ -58,7 +87,69 @@ class RegistrationView(View):
                 login(request, user)
 
                 return redirect('index')
+            else:
+                assign_eth_account(user)
 
             return redirect('login')
         else:
             return redirect('registration')
+
+
+class ApiView(View):
+    def get(self, request):
+        data = [
+            contract_instance_wrapper(
+                obj.contract_instance_adress
+            )
+            for obj in ContractInstance.objects.all()
+        ]
+
+        return render_json(
+            {
+                'reviews': data
+            }
+        )
+
+    def post(self, request):
+        params = json.loads(request.body)
+
+        print(User.objects.last().eth_account.address)
+        if params['type'] == 'add':
+            contract_address = post_review(
+                User.objects.get(id=params['review']['reviewer_id']).eth_account,
+                User.objects.get(id=params['review']['target_id']).eth_account,
+                params['review']['text']
+            )
+
+            review_contract = ContractInstance(contract_instance_adress=contract_address)
+            review_contract.save()
+
+            return render_json(
+                {
+                    'msg': 'ok'
+                }
+            )
+        elif params['type'] == 'user_reviews':
+
+
+            data = None
+
+            return render_json(
+                {
+                    'data': data
+                }
+            )
+        elif params['type'] == 'user_reviewed':
+            data = None
+
+            return render_json(
+                {
+                    'data': data
+                }
+            )
+
+        return render_json(
+            {
+                'msg': 'Unable to determine request type.'
+            }
+        )
