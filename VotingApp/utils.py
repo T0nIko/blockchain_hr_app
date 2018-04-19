@@ -8,7 +8,7 @@ def init_singletons():
 
     contract_interface = compiled_sol['review.sol:Reviews']
 
-    w3 = web3.Web3(web3.providers.eth_tester.EthereumTesterProvider())
+    w3 = web3.Web3(web3.providers.eth_tester.EthereumTesterProvider())  # TODO: somehow configure private chain & geth
     w3.eth.enable_unaudited_features()
 
     contract = w3.eth.contract(abi=contract_interface['abi'], bytecode=contract_interface['bin'])
@@ -19,11 +19,12 @@ def init_singletons():
 W3, CONTRACT, CONTRACT_INTERFACE = init_singletons()
 
 
-def post_review(reviewer, target, data):
+def post_review(reviewer, target, data, is_positive):
     deploy_txn = CONTRACT.constructor(
         reviewer.address,
         target.address,
-        data
+        data,
+        is_positive
     ).transact()
     txn_receipt = W3.eth.getTransactionReceipt(deploy_txn)
     contract_address = txn_receipt['contractAddress']
@@ -45,5 +46,6 @@ def contract_instance_wrapper(contract_address):
     return [
         instance.get_review_sender(),
         instance.get_review_target(),
-        instance.get_review_text()
+        instance.get_review_text(),
+        instance.get_review_is_positive()
     ]

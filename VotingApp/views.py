@@ -118,10 +118,15 @@ class ApiView(View):
             contract_address = post_review(
                 User.objects.get(id=params['review']['reviewer_id']).eth_account,
                 User.objects.get(id=params['review']['target_id']).eth_account,
-                params['review']['text']
+                params['review']['text'],
+                params['review']['is_positive']
             )
 
-            review_contract = ContractInstance(contract_instance_adress=contract_address)
+            review_contract = ContractInstance(
+                contract_instance_adress=contract_address,
+                reviewer_id=params['review']['reviewer_id'],
+                targer_id=params['review']['target_id']
+            )
             review_contract.save()
 
             return render_json(
@@ -130,9 +135,17 @@ class ApiView(View):
                 }
             )
         elif params['type'] == 'user_reviews':
+            contracts_addresses = [
+                contract.contract_instance_adress
+                for contract in ContractInstance.objects.filter(
+                    reviewer_id=params['user']['id']
+                )
+            ]
 
-
-            data = None
+            data = [
+                contract_instance_wrapper(contract_address)
+                for contract_address in contracts_addresses
+            ]
 
             return render_json(
                 {
@@ -140,7 +153,17 @@ class ApiView(View):
                 }
             )
         elif params['type'] == 'user_reviewed':
-            data = None
+            contracts_addresses = [
+                contract.contract_instance_adress
+                for contract in ContractInstance.objects.filter(
+                    targer_id=params['user']['id']
+                )
+            ]
+
+            data = [
+                contract_instance_wrapper(contract_address)
+                for contract_address in contracts_addresses
+            ]
 
             return render_json(
                 {
